@@ -7,7 +7,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import com.opengl.study.example2.MySurfaceView;
+import com.opengl.study.example4.MySurfaceView;
 
 public class MainActivity extends AppCompatActivity {
 
