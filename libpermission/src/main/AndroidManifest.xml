@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.oz.zeus.permission">
+
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application>
+            <activity
+            android:name="com.oz.zeus.permission.PermissionBaseActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="screenLayout|orientation|screenSize"
+            android:launchMode="singleInstance"
+            android:theme="@style/TranslucentNoAnimation" />
+        <activity
+            android:name="com.oz.zeus.permission.PermissionCaptureActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="screenLayout|orientation|screenSize"
+            android:launchMode="singleInstance"
+            android:theme="@style/TranslucentNoAnimation" />
+        <activity
+            android:name="com.oz.zeus.permission.PermissionOverlayActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="screenLayout|orientation|screenSize"
+            android:launchMode="singleInstance"
+            android:theme="@style/TranslucentNoAnimation" />
+        <activity
+            android:name="com.oz.zeus.permission.PermissionCommonActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="screenLayout|orientation|screenSize"
+            android:launchMode="singleInstance"
+            android:theme="@style/TranslucentNoAnimation" />
+    </application>
+</manifest>
