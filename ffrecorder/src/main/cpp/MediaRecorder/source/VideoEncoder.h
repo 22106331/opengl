@@ -22,6 +22,7 @@ class VideoEncoder {
         AVFormatContext * avFormatContext;
         AVStream *avStream;
         AVFrame *yuv;
+        int64_t next_pts;
 };
 
 

@@ -7,7 +7,7 @@
 
 #include <android/log.h>
 
-#define TAG "CainCamera"
+#define TAG "ffrecorder"
 
 #define ALOGE(format, ...) __android_log_print(ANDROID_LOG_ERROR, TAG, format, ##__VA_ARGS__)
 #define ALOGI(format, ...) __android_log_print(ANDROID_LOG_INFO,  TAG, format, ##__VA_ARGS__)

@@ -17,7 +17,8 @@ VideoEncoder::VideoEncoder()
         :isInit(false),
          avCodecContext(nullptr),
          avCodec(nullptr),
-         avFormatContext(nullptr)
+         avFormatContext(nullptr),
+         next_pts(0)
 {
     av_log_set_callback(ffmpeg_log);
 }
@@ -92,19 +93,20 @@ int VideoEncoder::videoEncode(uint8_t *data) {
     memcpy(yuv->data[2], (char *) data + avCodecContext->width * avCodecContext->height * 5 / 4,
            avCodecContext->width * avCodecContext->height / 4);
     int ret = avcodec_send_frame(avCodecContext,yuv);
+    yuv->pts = av_rescale_q(next_pts++,
+                              avCodecContext->framerate, avCodecContext->time_base);
     if (ret != 0)
     {
-        return ret;
     }
-    AVPacket pkt;
+    AVPacket pkt = {0};
     av_init_packet(&pkt);
     //接收编码结果
     ret = avcodec_receive_packet(avCodecContext,&pkt);
     if (ret != 0){
-
     }
     //将编码后的帧写入文件
     av_interleaved_write_frame(avFormatContext,&pkt);
+
 
     return 0;
 }
@@ -117,6 +119,8 @@ int VideoEncoder::stopEncode() {
 
     //清理封装输出上下文
     avformat_free_context(avFormatContext);
+
+    av_frame_free(&yuv);
 
     //关闭编码器
     avcodec_close(avCodecContext);
