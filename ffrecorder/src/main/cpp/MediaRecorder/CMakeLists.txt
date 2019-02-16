@@ -21,6 +21,7 @@ add_library( media_recorder
              # library
              source/CainEncoder.cpp
              source/CainRecorder.cpp
+             source/VideoEncoder.cpp
 
              # controller
              RecorderController.cpp )

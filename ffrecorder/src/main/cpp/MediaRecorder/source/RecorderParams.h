@@ -9,7 +9,7 @@
 
 typedef struct EncoderParams {
 
-    const char *mediaPath;  // 视频文件
+    const char *outputFilePath;  // 视频文件
     int previewWidth;       // 预览宽度
     int previewHeight;      // 预览高度
     int videoWidth;         // 输出宽度
@@ -19,6 +19,10 @@ typedef struct EncoderParams {
     int enableAudio;        // 是否允许音频编码
     int audioBitRate;       // 音频码率
     int audioSampleRate;    // 采样率
+    enum AVPixelFormat pixelFormat; //Pixel format
+    int threadCount;        //线程数
+
+
 };
 
 #endif //CAINCAMERA_ENCODER_PARAMS_H

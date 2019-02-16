@@ -103,14 +103,14 @@ void CainEncoder::setAudioBitRate(int bitRate) {
  * @param fmt
  * @param vl
  */
-void ffmpeg_log(void *ptr, int level, const char *fmt, va_list vl) {
-    FILE *fp = fopen("/storage/emulated/0/av_log.txt", "a+");
-    if (fp) {
-        vfprintf(fp, fmt, vl);
-        fflush(fp);
-        fclose(fp);
-    }
-}
+//void ffmpeg_log(void *ptr, int level, const char *fmt, va_list vl) {
+//    FILE *fp = fopen("/storage/emulated/0/av_log.txt", "a+");
+//    if (fp) {
+//        vfprintf(fp, fmt, vl);
+//        fflush(fp);
+//        fclose(fp);
+//    }
+//}
 
 /**
  * 初始化编码器
@@ -123,7 +123,7 @@ bool CainEncoder::initEncoder() {
     do {
         AVDictionary *opt = NULL;
         int ret;
-        av_log_set_callback(ffmpeg_log);
+//        av_log_set_callback(ffmpeg_log);
         // 注册
         av_register_all();
         // 分配输出媒体上下文

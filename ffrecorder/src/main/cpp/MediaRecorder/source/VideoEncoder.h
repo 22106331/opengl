@@ -9,16 +9,19 @@
 #include "RecorderParams.h"
 
 class VideoEncoder {
-public:
-    VideoEncoder();
-    ~VideoEncoder();
-    void initEncoder(EncoderParams * params);
-
-private:
-    void ffmpeg_log(void *ptr, int level, const char *fmt, va_list vl);
-    bool isInit;
-    AVCodec *avCodec ;
-    AVCodecContext *avCodecContext ;
+    public:
+        VideoEncoder();
+        ~VideoEncoder();
+        void initEncoder(EncoderParams * params);
+        int videoEncode(uint8_t * data);
+        int stopEncode();
+    private:
+        bool isInit;
+        AVCodec *avCodec ;
+        AVCodecContext *avCodecContext ;
+        AVFormatContext * avFormatContext;
+        AVStream *avStream;
+        AVFrame *yuv;
 };
 
 
