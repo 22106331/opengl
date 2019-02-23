@@ -3,12 +3,12 @@
 //
 
 #include<jni.h>
-#include "source/CainRecorder.h"
+#include "source/VideoEncoder.h"
 
 using namespace std;
 
 // 录制器
-CainRecorder *recorder;
+VideoEncoder *recorder;
 
 /**
  * 初始化编码器
@@ -28,7 +28,7 @@ CainRecorder *recorder;
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_initMediaRecorder(JNIEnv *env, jobject instance,
+Java_com_ffmpeg_recorder_VideoRecorder_initMediaRecorder(JNIEnv *env, jobject instance,
                                                                      jstring videoPath_,
                                                                      jint previewWidth,
                                                                      jint previewHeight,
@@ -41,7 +41,7 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_initMediaRecorder(JNI
     // 配置参数
     const char * videoPath = env->GetStringUTFChars(videoPath_, 0);
     EncoderParams *params = (EncoderParams *)malloc(sizeof(EncoderParams));
-    params->mediaPath = videoPath;
+    params->outputFilePath = videoPath;
     params->previewWidth = previewWidth;
     params->previewHeight = previewHeight;
     params->videoWidth = videoWidth;
@@ -57,8 +57,8 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_initMediaRecorder(JNI
     params->audioBitRate = audioBitRate;
     params->audioSampleRate = audioSampleRate;
     // 初始化录制器
-    recorder = new CainRecorder(params);
-    return recorder->initRecorder();
+    recorder = new VideoEncoder();
+    return recorder->initEncoder(params);
 }
 
 /**
@@ -69,11 +69,10 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_initMediaRecorder(JNI
  */
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_startRecord(JNIEnv *env, jobject instance) {
+Java_com_ffmpeg_recorder_VideoRecorder_startRecord(JNIEnv *env, jobject instance) {
     if (!recorder) {
         return;
     }
-    recorder->startRecord();
 }
 
 /**
@@ -85,14 +84,14 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_startRecord(JNIEnv *e
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_encodeYUVFrame(JNIEnv *env, jobject instance, jbyteArray yuvData) {
+Java_com_ffmpeg_recorder_VideoRecorder_encodeYUVFrame(JNIEnv *env, jobject instance, jbyteArray yuvData) {
     if (!recorder) {
         return 0;
     }
     // 获取数据
     jbyte *elements = env->GetByteArrayElements(yuvData, 0);
     // 发送大编码队列
-    recorder->avcEncode(elements);
+    recorder->videoEncode((uint8_t *)elements);
     // 释放资源
     env->ReleaseByteArrayElements(yuvData, elements, 0);
     return 0;
@@ -107,15 +106,15 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_encodeYUVFrame(JNIEnv
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_encodePCMFrame(JNIEnv *env, jobject instance, jbyteArray pcmData, jint len) {
+Java_com_ffmpeg_recorder_VideoRecorder_encodePCMFrame(JNIEnv *env, jobject instance, jbyteArray pcmData, jint len) {
     if (!recorder) {
         return 0;
     }
-    jbyte *pcm = env->GetByteArrayElements(pcmData, 0);
+//    jbyte *pcm = env->GetByteArrayElements(pcmData, 0);
     // 音频编码
-    recorder->aacEncode(pcm);
+//    recorder->aacEncode(pcm);
     // 释放资源
-    env->ReleaseByteArrayElements(pcmData, pcm, 0);
+//    env->ReleaseByteArrayElements(pcmData, pcm, 0);
     return 0;
 }
 
@@ -127,11 +126,11 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_encodePCMFrame(JNIEnv
  */
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_stopRecord(JNIEnv *env, jobject instance) {
+Java_com_ffmpeg_recorder_VideoRecorder_stopRecord(JNIEnv *env, jobject instance) {
     if (!recorder) {
         return;
     }
-    recorder->recordEndian();
+    recorder->stopEncode();
 }
 
 /**
@@ -142,10 +141,9 @@ Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_stopRecord(JNIEnv *en
  */
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_cgfay_ffmpeglibrary_MediaRecorder_AVMediaRecorder_nativeRelease(JNIEnv *env, jobject instance) {
+Java_com_ffmpeg_recorder_VideoRecorder_nativeRelease(JNIEnv *env, jobject instance) {
     if(!recorder) {
         return;
     }
-    recorder->release();
     delete(recorder);
 }

@@ -12,7 +12,7 @@ class VideoEncoder {
     public:
         VideoEncoder();
         ~VideoEncoder();
-        void initEncoder(EncoderParams * params);
+        int initEncoder(EncoderParams * params);
         int videoEncode(uint8_t * data);
         int stopEncode();
     private:

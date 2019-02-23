@@ -28,7 +28,7 @@ int CainRecorder::initRecorder() {
     }
 
     encoder = new CainEncoder();
-    encoder->setOutputFile(params->mediaPath);
+    encoder->setOutputFile(params->outputFilePath);
     encoder->setVideoColorFormat(OMX_COLOR_FormatYUV420SemiPlanar);
     encoder->setVideoSize(params->previewWidth, params->previewHeight);
     encoder->setVideoFrameRate(params->frameRate);

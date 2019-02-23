@@ -3,7 +3,7 @@
 //
 
 #include "VideoEncoder.h"
-
+#include "AndroidLog.h"
 void ffmpeg_log(void *ptr, int level, const char *fmt, va_list vl) {
     FILE *fp = fopen("/storage/emulated/0/av_log.txt", "a+");
     if (fp) {
@@ -23,18 +23,23 @@ VideoEncoder::VideoEncoder()
     av_log_set_callback(ffmpeg_log);
 }
 
-void VideoEncoder::initEncoder(EncoderParams *params)
+int VideoEncoder::initEncoder(EncoderParams *params)
 {
+    int ret = -1;
     if (params != nullptr && !isInit) {
+        ret = 0;
+        av_register_all();
+        avcodec_register_all();
         avCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
         if (!avCodec) {
             av_log(nullptr,AV_LOG_ERROR,"find encoder null");
-            return;
+            goto error;
         }
         avCodecContext = avcodec_alloc_context3(avCodec);
         if (!avCodecContext) {
+            ALOGE("avcodec_alloc_context3 null");
             av_log(nullptr,AV_LOG_ERROR,"avcodec_alloc_context3 null");
-            return;
+            goto error;
         }
         avCodecContext->bit_rate = params->bitRate;
         avCodecContext->width = params->videoWidth;
@@ -52,24 +57,28 @@ void VideoEncoder::initEncoder(EncoderParams *params)
         av_dict_set(&opt, "tune", "zerolatency", 0);
         av_dict_set(&opt, "profile", "baseline", 0);
         av_opt_set(avCodecContext->priv_data, "preset", "slow", 0);
-        int ret = avcodec_open2(avCodecContext, avCodec, &opt);
+        ret = avcodec_open2(avCodecContext, avCodec, NULL);
         if (ret < 0 ) {
+            char * errStr = av_err2str(ret);
+            ALOGE("avcodec_open2 fail %s",errStr);
             av_log(nullptr,AV_LOG_ERROR,"avcodec_open2 fail");
-            return;
+            goto error;
         }
-        ret = avformat_alloc_output_context2(&avFormatContext,NULL,NULL,params->outputFilePath);
+        ret = avformat_alloc_output_context2(&avFormatContext, nullptr, nullptr,params->outputFilePath);
         if (ret < 0) {
+            ALOGE("avformat_alloc_output_context2 fail");
             av_log(nullptr,AV_LOG_ERROR,"avformat_alloc_output_context2 fail");
-            return;
+            goto error;
         }
 
-        avStream = avformat_new_stream(avFormatContext,NULL);
+        avStream = avformat_new_stream(avFormatContext,nullptr);
         avStream->id = 0;
         avStream->codecpar->codec_tag = 0;
         ret = avcodec_parameters_from_context(avStream->codecpar,avCodecContext);
         if (ret < 0) {
+            ALOGE("avcodec_parameters_from_context fail");
             av_log(nullptr,AV_LOG_ERROR,"avcodec_parameters_from_context fail");
-            return;
+            goto error;
         }
         av_dict_set(&avStream->metadata, "rotate", "90", 0);
 
@@ -79,11 +88,26 @@ void VideoEncoder::initEncoder(EncoderParams *params)
         yuv->height = params->videoHeight;
 
         ret = av_frame_get_buffer(yuv,32);
+        if (ret < 0) {
+            ALOGE("av_frame_get_buffer fail");
+            av_log(nullptr,AV_LOG_ERROR,"av_frame_get_buffer fail");
+            goto error;
+        }
         ret = avio_open(&avFormatContext->pb,params->outputFilePath,AVIO_FLAG_WRITE);
-        ret = avformat_write_header(avFormatContext, NULL);
-
+        if (ret < 0) {
+            ALOGE("avio_open fail");
+            av_log(nullptr,AV_LOG_ERROR,"avio_open fail");
+            goto error;
+        }
+        ret = avformat_write_header(avFormatContext, nullptr);
+        if (ret < 0) {
+            ALOGE("avformat_write_header fail");
+            av_log(nullptr,AV_LOG_ERROR,"avformat_write_header fail");
+        }
     }
-
+    error:
+    ;
+    return ret;
 }
 
 int VideoEncoder::videoEncode(uint8_t *data) {
@@ -97,23 +121,30 @@ int VideoEncoder::videoEncode(uint8_t *data) {
                               avCodecContext->framerate, avCodecContext->time_base);
     if (ret != 0)
     {
+        ALOGE("avcodec_send_frame fail");
+        return ret;
     }
     AVPacket pkt = {0};
     av_init_packet(&pkt);
     //接收编码结果
     ret = avcodec_receive_packet(avCodecContext,&pkt);
     if (ret != 0){
+        ALOGE("avcodec_receive_packet fail");
     }
     //将编码后的帧写入文件
     av_interleaved_write_frame(avFormatContext,&pkt);
-
-
+    av_packet_unref(&pkt);
     return 0;
 }
 
 int VideoEncoder::stopEncode() {
-    av_write_trailer(avFormatContext);
+    if (avFormatContext) {
+        av_write_trailer(avFormatContext);
+    }
+    return 0;
+}
 
+VideoEncoder::~VideoEncoder() {
     //关闭视频输出IO
     avio_close(avFormatContext->pb);
 
@@ -127,7 +158,4 @@ int VideoEncoder::stopEncode() {
 
     //清理编码器上下文
     avcodec_free_context(&avCodecContext);
-
-    return 0;
 }
-
