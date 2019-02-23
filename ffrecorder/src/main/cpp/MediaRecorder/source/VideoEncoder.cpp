@@ -48,14 +48,14 @@ int VideoEncoder::initEncoder(EncoderParams *params)
         avCodecContext->framerate = (AVRational){params->frameRate,1};
         avCodecContext->time_base = (AVRational){1,params->frameRate};
         avCodecContext->max_b_frames = 1;
-        avCodecContext->pix_fmt = params->pixelFormat;
-        avCodecContext->thread_count = params->threadCount;
+        avCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+//        avCodecContext->thread_count = params->threadCount;
 
         avCodecContext->codec_id = AV_CODEC_ID_H264;
         avCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-        AVDictionary *opt = nullptr;
-        av_dict_set(&opt, "tune", "zerolatency", 0);
-        av_dict_set(&opt, "profile", "baseline", 0);
+//        AVDictionary *opt = nullptr;
+//        av_dict_set(&opt, "tune", "zerolatency", 0);
+//        av_dict_set(&opt, "profile", "baseline", 0);
         av_opt_set(avCodecContext->priv_data, "preset", "slow", 0);
         ret = avcodec_open2(avCodecContext, avCodec, NULL);
         if (ret < 0 ) {
@@ -129,7 +129,8 @@ int VideoEncoder::videoEncode(uint8_t *data) {
     //接收编码结果
     ret = avcodec_receive_packet(avCodecContext,&pkt);
     if (ret != 0){
-        ALOGE("avcodec_receive_packet fail");
+        char * errStr = av_err2str(ret);
+        ALOGE("avcodec_receive_packet fail %s",errStr);
     }
     //将编码后的帧写入文件
     av_interleaved_write_frame(avFormatContext,&pkt);
