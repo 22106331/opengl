@@ -17,8 +17,7 @@ VideoEncoder::VideoEncoder()
         :isInit(false),
          avCodecContext(nullptr),
          avCodec(nullptr),
-         avFormatContext(nullptr),
-         next_pts(0)
+         avFormatContext(nullptr)
 {
     av_log_set_callback(ffmpeg_log);
 }
@@ -48,7 +47,7 @@ int VideoEncoder::initEncoder(EncoderParams *params)
         avCodecContext->framerate = (AVRational){params->frameRate,1};
         avCodecContext->time_base = (AVRational){1,params->frameRate};
         avCodecContext->max_b_frames = 1;
-        avCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+        avCodecContext->pix_fmt = AV_PIX_FMT_NV21;
 //        avCodecContext->thread_count = params->threadCount;
 
         avCodecContext->codec_id = AV_CODEC_ID_H264;
@@ -80,10 +79,10 @@ int VideoEncoder::initEncoder(EncoderParams *params)
             av_log(nullptr,AV_LOG_ERROR,"avcodec_parameters_from_context fail");
             goto error;
         }
-        av_dict_set(&avStream->metadata, "rotate", "90", 0);
+        av_dict_set(&avStream->metadata, "rotate", "270", 0);
 
         yuv = av_frame_alloc();
-        yuv->format = AV_PIX_FMT_YUV420P;
+        yuv->format = AV_PIX_FMT_NV21;
         yuv->width = params->videoWidth;
         yuv->height = params->videoHeight;
 
@@ -99,64 +98,86 @@ int VideoEncoder::initEncoder(EncoderParams *params)
             av_log(nullptr,AV_LOG_ERROR,"avio_open fail");
             goto error;
         }
+        pkt = av_packet_alloc();
+        if (!pkt) {
+            ALOGE("av_packet_alloc fail");
+            ret = -1;
+            goto error;
+        }
         ret = avformat_write_header(avFormatContext, nullptr);
         if (ret < 0) {
             ALOGE("avformat_write_header fail");
             av_log(nullptr,AV_LOG_ERROR,"avformat_write_header fail");
+            goto error;
         }
     }
     error:
     ;
     return ret;
 }
-
+volatile int next_pts=0;
 int VideoEncoder::videoEncode(uint8_t *data) {
     memcpy(yuv->data[0], data, avCodecContext->width * avCodecContext->height);
     memcpy(yuv->data[1], (char *) data + avCodecContext->width * avCodecContext->height,
-           avCodecContext->width * avCodecContext->height / 4);
-    memcpy(yuv->data[2], (char *) data + avCodecContext->width * avCodecContext->height * 5 / 4,
-           avCodecContext->width * avCodecContext->height / 4);
+           avCodecContext->width * avCodecContext->height / 2);
+    yuv->pts = next_pts;
+    next_pts += 3600;
+//    yuv->pts = av_rescale_q(next_pts++,
+//                            avCodecContext->framerate, avCodecContext->time_base);
+    ALOGE("Write packet11 %d\n", next_pts);
     int ret = avcodec_send_frame(avCodecContext,yuv);
-    yuv->pts = av_rescale_q(next_pts++,
-                              avCodecContext->framerate, avCodecContext->time_base);
+
     if (ret != 0)
     {
-        ALOGE("avcodec_send_frame fail");
+        char * errStr = av_err2str(ret);
+        ALOGE("avcodec_send_frame fail %s",errStr);
         return ret;
     }
-    AVPacket pkt = {0};
-    av_init_packet(&pkt);
+
     //接收编码结果
-    ret = avcodec_receive_packet(avCodecContext,&pkt);
-    if (ret != 0){
-        char * errStr = av_err2str(ret);
-        ALOGE("avcodec_receive_packet fail %s",errStr);
+    while (ret >= 0) {
+        ret = avcodec_receive_packet(avCodecContext,pkt);
+        ALOGE("avcodec_receive_packet ret = %d",ret);
+        if (ret < 0){
+            char * errStr = av_err2str(ret);
+            ALOGE("avcodec_receive_packet fail %s",errStr);
+        }
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            return ret;
+        ALOGE("Write packet %d (size=%5d)\n", pkt->pts, pkt->size);
+        av_interleaved_write_frame(avFormatContext,pkt);
+        av_packet_unref(pkt);
     }
-    //将编码后的帧写入文件
-    av_interleaved_write_frame(avFormatContext,&pkt);
-    av_packet_unref(&pkt);
-    return 0;
+
+    return ret;
 }
 
 int VideoEncoder::stopEncode() {
     if (avFormatContext) {
         av_write_trailer(avFormatContext);
+        //关闭视频输出IO
+        avio_close(avFormatContext->pb);
     }
     return 0;
 }
 
 VideoEncoder::~VideoEncoder() {
-    //关闭视频输出IO
-    avio_close(avFormatContext->pb);
+
+
 
     //清理封装输出上下文
     avformat_free_context(avFormatContext);
 
     av_frame_free(&yuv);
 
+
     //关闭编码器
     avcodec_close(avCodecContext);
 
     //清理编码器上下文
     avcodec_free_context(&avCodecContext);
+    if (pkt) {
+        av_packet_free(&pkt);
+    }
+
 }

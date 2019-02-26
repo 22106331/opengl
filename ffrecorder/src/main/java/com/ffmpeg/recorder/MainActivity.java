@@ -86,6 +86,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             doEncode();
         }else if (v.getId() == R.id.stop){
             try {
+                isStop.set(true);
                 if (encodeThread != null) {
                     encodeThread.join(1000);
                     encodeThread.interrupt();
@@ -93,7 +94,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
                 VideoRecorder.stopRecord();
                 VideoRecorder.nativeRelease();
             }catch (InterruptedException e){
-
+                e.printStackTrace();
             }
 
         }
@@ -104,11 +105,15 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             @Override
             public void run() {
                 try {
-                    if (!isStop.get()) {
-                        byte[] buffer = yuvQueue.take();
-                        if (buffer != null) {
-                            VideoRecorder.encodeYUVFrame(buffer);
-                            isStop.set(true);
+                    while (true) {
+                        if (!isStop.get()) {
+                            byte[] buffer = yuvQueue.take();
+                            if (buffer != null) {
+                                VideoRecorder.encodeYUVFrame(buffer);
+//                            isStop.set(true);
+                            }
+                        }else {
+                            break;
                         }
                     }
                 }catch (InterruptedException e){
@@ -157,9 +162,10 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
                         if (yuvQueue.size() > 9) {
                             yuvQueue.take();
                         }
+                        Log.e("ffrecorder","yuvQueue.put");
                         yuvQueue.put(data);
                     }catch (InterruptedException e){
-
+                        Log.e("ffrecorder","e：" +e.toString());
                     }
 
                 }
